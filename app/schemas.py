@@ -81,3 +81,52 @@ class BulkDeleteRequest(BaseModel):
                 ]
             }
         }
+
+
+class ReviewBase(BaseModel):
+    """Base schema for Review."""
+
+    rating: int  # 1-5 stars
+    comment: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    reviewer_email: Optional[str] = None
+
+
+class ReviewCreate(ReviewBase):
+    """Schema for creating Review."""
+
+    pass
+
+
+class ReviewUpdate(BaseModel):
+    """Schema for updating Review."""
+
+    rating: Optional[int] = None
+    comment: Optional[str] = None
+    reviewer_name: Optional[str] = None
+    reviewer_email: Optional[str] = None
+
+
+class ReviewResponse(ReviewBase):
+    """Schema for Review response."""
+
+    id: UUID
+    sgi_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        """Pydantic config."""
+
+        from_attributes = True
+
+
+class SGIResponseWithReviews(SGIResponse):
+    """Schema for SGI response with reviews."""
+
+    reviews: List[ReviewResponse] = []
+
+    class Config:
+        """Pydantic config."""
+
+        from_attributes = True

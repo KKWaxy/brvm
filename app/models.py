@@ -3,9 +3,10 @@ Database models for SGI data.
 """
 
 import uuid
-from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 from app.database import Base
 
 
@@ -34,10 +35,39 @@ class SGI(Base):
     courtage = Column(String(50))
     frais_conservation = Column(String(100))
     observations = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False, index=True)
     updated_at = Column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
+    # Relationship
+    reviews = relationship("Review", back_populates="sgi", cascade="all, delete-orphan")
+
+
+class Review(Base):
+    """Review and rating model for SGI."""
+
+    __tablename__ = "reviews"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+    )
+    sgi_id = Column(UUID(as_uuid=True), ForeignKey("sgi.id", ondelete="CASCADE"), nullable=False, index=True)
+    rating = Column(Integer, nullable=False, index=True)  # 1-5 stars
+    comment = Column(Text)
+    reviewer_name = Column(String(255))
+    reviewer_email = Column(String(255))
+    created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False, index=True)
+    updated_at = Column(
+        DateTime,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False,
+    )
+    # Relationship
+    sgi = relationship("SGI", back_populates="reviews")

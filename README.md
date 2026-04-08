@@ -1,6 +1,13 @@
 # SGI - FastAPI Application
 
-Une application FastAPI moderne pour gérer les données des Sociétés de Gestion d'Intermédiaires (SGI) avec support SQLite.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/fastapi-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+[![SQLAlchemy](https://img.shields.io/badge/sqlalchemy-2.0+-orange.svg)](https://www.sqlalchemy.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Type: mypy](https://img.shields.io/badge/type%20checking-mypy-green)](http://mypy-lang.org/)
+
+Application FastAPI moderne pour gérer les données des Sociétés de Gestion d'Intermédiaires (SGI) avec support SQLite/PostgreSQL.
 
 ## Caractéristiques
 

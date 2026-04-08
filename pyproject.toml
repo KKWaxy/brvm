@@ -1,10 +1,33 @@
 [project]
 name = "sgi"
 version = "0.1.0"
-description = "brvm sgi app"
+description = "FastAPI application for managing SGI (Sociétés de Gestion d'Intermédiaires) data with SQLite/PostgreSQL support"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{name = "Developer"}]
+authors = [{name = "Contributors", email = "contact@example.com"}]
+license = {text = "MIT"}
+keywords = ["fastapi", "sgi", "api", "database", "sqlalchemy", "csv"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: French",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Database",
+]
+homepage = "https://github.com/yourusername/sgi"
+repository = "https://github.com/yourusername/sgi"
+documentation = "https://github.com/yourusername/sgi"
+issues = "https://github.com/yourusername/sgi/issues"
 dependencies = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",

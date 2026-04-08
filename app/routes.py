@@ -8,8 +8,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import SGI
-from app.schemas import SGICreate, SGIResponse, SGIUpdate, BulkDeleteRequest
+from app.models import SGI, Review
+from app.schemas import (
+    SGICreate,
+    SGIResponse,
+    SGIUpdate,
+    BulkDeleteRequest,
+    ReviewCreate,
+    ReviewResponse,
+    ReviewUpdate,
+    SGIResponseWithReviews,
+)
 
 router = APIRouter()
 
@@ -193,3 +202,158 @@ async def bulk_delete_sgi(request: BulkDeleteRequest, db: Session = Depends(get_
     deleted_count = db.query(SGI).filter(SGI.id.in_(request.ids)).delete()
     db.commit()
     return {"deleted": deleted_count}
+
+
+# ============================================================================
+# Review Endpoints
+# ============================================================================
+
+
+@router.get("/sgi/{sgi_id}/reviews", response_model=List[ReviewResponse], tags=["Reviews"])
+async def get_reviews(
+    sgi_id: UUID,
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+):
+    """
+    Get all reviews for a specific SGI.
+
+    **Parameters:**
+    - **sgi_id**: UUID of the SGI
+    - **skip**: Number of records to skip (default: 0)
+    - **limit**: Maximum records to return (default: 100, max: 1000)
+    """
+    sgi = db.query(SGI).filter(SGI.id == sgi_id).first()
+    if not sgi:
+        raise HTTPException(status_code=404, detail="SGI not found")
+
+    reviews = db.query(Review).filter(Review.sgi_id == sgi_id).offset(skip).limit(limit).all()
+    return reviews
+
+
+@router.get("/sgi/{sgi_id}/reviews/{review_id}", response_model=ReviewResponse, tags=["Reviews"])
+async def get_review(sgi_id: UUID, review_id: UUID, db: Session = Depends(get_db)):
+    """Get a specific review by ID."""
+    review = (
+        db.query(Review)
+        .filter((Review.id == review_id) & (Review.sgi_id == sgi_id))
+        .first()
+    )
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    return review
+
+
+@router.post("/sgi/{sgi_id}/reviews", response_model=ReviewResponse, tags=["Reviews"])
+async def create_review(
+    sgi_id: UUID, review: ReviewCreate, db: Session = Depends(get_db)
+):
+    """
+    Create a new review for an SGI.
+
+    **Parameters:**
+    - **sgi_id**: UUID of the SGI
+    - **rating**: Rating from 1 to 5 stars (required)
+    - **comment**: Optional comment
+    - **reviewer_name**: Optional reviewer name
+    - **reviewer_email**: Optional reviewer email
+    """
+    # Validate rating
+    if review.rating < 1 or review.rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+
+    # Check if SGI exists
+    sgi = db.query(SGI).filter(SGI.id == sgi_id).first()
+    if not sgi:
+        raise HTTPException(status_code=404, detail="SGI not found")
+
+    # Create review
+    db_review = Review(
+        sgi_id=sgi_id,
+        rating=review.rating,
+        comment=review.comment,
+        reviewer_name=review.reviewer_name,
+        reviewer_email=review.reviewer_email,
+    )
+    db.add(db_review)
+    db.commit()
+    db.refresh(db_review)
+    return db_review
+
+
+@router.put("/sgi/{sgi_id}/reviews/{review_id}", response_model=ReviewResponse, tags=["Reviews"])
+async def update_review(
+    sgi_id: UUID, review_id: UUID, review_data: ReviewUpdate, db: Session = Depends(get_db)
+):
+    """Update a review."""
+    review = (
+        db.query(Review)
+        .filter((Review.id == review_id) & (Review.sgi_id == sgi_id))
+        .first()
+    )
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    # Validate rating if provided
+    if review_data.rating is not None and (review_data.rating < 1 or review_data.rating > 5):
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+
+    update_data = review_data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(review, field, value)
+
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+@router.delete("/sgi/{sgi_id}/reviews/{review_id}", tags=["Reviews"])
+async def delete_review(sgi_id: UUID, review_id: UUID, db: Session = Depends(get_db)):
+    """Delete a review."""
+    review = (
+        db.query(Review)
+        .filter((Review.id == review_id) & (Review.sgi_id == sgi_id))
+        .first()
+    )
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    db.delete(review)
+    db.commit()
+    return {"message": "Review deleted successfully"}
+
+
+@router.get("/sgi/{sgi_id}/rating-average", tags=["Reviews"])
+async def get_average_rating(sgi_id: UUID, db: Session = Depends(get_db)):
+    """Get average rating for a specific SGI."""
+    sgi = db.query(SGI).filter(SGI.id == sgi_id).first()
+    if not sgi:
+        raise HTTPException(status_code=404, detail="SGI not found")
+
+    reviews = db.query(Review).filter(Review.sgi_id == sgi_id).all()
+    if not reviews:
+        return {
+            "sgi_id": sgi_id,
+            "sgi_nom": sgi.nom,
+            "average_rating": None,
+            "total_reviews": 0,
+        }
+
+    average = sum(r.rating for r in reviews) / len(reviews)
+    return {
+        "sgi_id": sgi_id,
+        "sgi_nom": sgi.nom,
+        "average_rating": round(average, 2),
+        "total_reviews": len(reviews),
+    }
+
+
+@router.get("/sgi/{sgi_id}/with-reviews", response_model=SGIResponseWithReviews, tags=["SGI"])
+async def get_sgi_with_reviews(sgi_id: UUID, db: Session = Depends(get_db)):
+    """Get a specific SGI with all its reviews."""
+    sgi = db.query(SGI).filter(SGI.id == sgi_id).first()
+    if not sgi:
+        raise HTTPException(status_code=404, detail="SGI not found")
+    return sgi
