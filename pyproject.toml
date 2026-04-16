@@ -1,10 +1,10 @@
 [project]
 name = "sgi"
 version = "0.1.0"
-description = "FastAPI application for managing SGI (Sociétés de Gestion d'Intermédiaires) data with SQLite/PostgreSQL support"
+description = "FastAPI application for managing SGI (Sociétés de Gestion d'Intermédiaires)"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{name = "Contributors", email = "contact@example.com"}]
+authors = [{name = "Contributors", email = "admin@flexci.org"}]
 license = {text = "MIT"}
 keywords = ["fastapi", "sgi", "api", "database", "sqlalchemy", "csv"]
 classifiers = [
@@ -24,10 +24,10 @@ classifiers = [
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Database",
 ]
-homepage = "https://github.com/yourusername/sgi"
-repository = "https://github.com/yourusername/sgi"
-documentation = "https://github.com/yourusername/sgi"
-issues = "https://github.com/yourusername/sgi/issues"
+homepage = "https://github.com/kkwaxy/sgi"
+repository = "https://github.com/kkwaxy/sgi"
+documentation = "https://github.com/kkwaxy/sgi"
+issues = "https://github.com/kkwaxy/sgi/issues"
 dependencies = [
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
