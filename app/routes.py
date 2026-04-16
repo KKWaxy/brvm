@@ -2,13 +2,16 @@
 API routes for SGI data.
 """
 
-from typing import List, Optional
+from datetime import datetime
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.auth import get_current_user
 from app.database import get_db
-from app.models import SGI, Review
+from app.enums import ReviewStatus
+from app.models import SGI, Review, User
 from app.schemas import (
     SGICreate,
     SGIResponse,
@@ -17,6 +20,9 @@ from app.schemas import (
     ReviewCreate,
     ReviewResponse,
     ReviewUpdate,
+    ReviewModerationApprove,
+    ReviewModerationReject,
+    ReviewModerationResponse,
     SGIResponseWithReviews,
 )
 
@@ -26,7 +32,7 @@ router = APIRouter()
 @router.get("/")
 async def root():
     """Root endpoint."""
-    return {"message": "Welcome to SGI API", "version": "0.1.0"}
+    return {"message": "Welcome to BRVM SGI API", "version": "0.1.0"}
 
 
 @router.get("/health")
@@ -75,11 +81,14 @@ async def count_sgi(db: Session = Depends(get_db)):
     return {"total": count}
 
 
-@router.get("/sgi/countries", response_model=List[str], tags=["SGI"])
+@router.get("/sgi/countries", response_model=Dict[str, Any], tags=["SGI"])
 async def get_countries(db: Session = Depends(get_db)):
     """Get list of all unique countries."""
     countries = db.query(SGI.pays).distinct().filter(SGI.pays.isnot(None)).all()
-    return sorted([c[0] for c in countries if c[0]])
+    countries_names: List[str] = sorted([c[0] for c in countries if c[0]])
+    print(type(countries_names), countries_names)
+    total = len(countries_names)
+    return {"countries": countries_names, "total": total}
 
 
 @router.get("/sgi/by-country/{pays}", response_model=List[SGIResponse], tags=["SGI"])
@@ -357,3 +366,81 @@ async def get_sgi_with_reviews(sgi_id: UUID, db: Session = Depends(get_db)):
     if not sgi:
         raise HTTPException(status_code=404, detail="SGI not found")
     return sgi
+
+
+# ============================================================================
+# Review Moderation Endpoints
+# ============================================================================
+
+
+@router.get("/admin/reviews/pending", response_model=List[ReviewModerationResponse], tags=["Moderation"])
+async def list_pending_reviews(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+):
+    """List all pending reviews for moderation."""
+    reviews = (
+        db.query(Review)
+        .filter(Review.status == ReviewStatus.PENDING)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return reviews
+
+
+@router.put("/admin/reviews/{review_id}/approve", response_model=ReviewModerationResponse, tags=["Moderation"])
+async def approve_review(
+    review_id: UUID,
+    approval: ReviewModerationApprove,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Approve a review."""
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    if review.status != ReviewStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Review is not pending")
+
+    review.status = ReviewStatus.APPROVED
+    review.moderation_reason = approval.moderation_reason
+    review.moderated_by = current_user.id
+    review.moderated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(review)
+    return review
+
+
+@router.put("/admin/reviews/{review_id}/reject", response_model=ReviewModerationResponse, tags=["Moderation"])
+async def reject_review(
+    review_id: UUID,
+    rejection: ReviewModerationReject,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reject a review."""
+    review = db.query(Review).filter(Review.id == review_id).first()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+
+    if review.status != ReviewStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Review is not pending")
+
+    if not rejection.moderation_reason:
+        raise HTTPException(
+            status_code=400, detail="Moderation reason is required for rejection"
+        )
+
+    review.status = ReviewStatus.REJECTED
+    review.moderation_reason = rejection.moderation_reason
+    review.moderated_by = current_user.id
+    review.moderated_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(review)
+    return review

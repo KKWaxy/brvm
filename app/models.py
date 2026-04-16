@@ -8,6 +8,7 @@ from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.enums import ReviewStatus
 
 
 class SGI(Base):
@@ -32,8 +33,9 @@ class SGI(Base):
     agrement_crepmf = Column(String(100))
     gestion_libre = Column(String(50))
     apport_initial_fcfa = Column(String(50))
-    courtage = Column(String(50))
+    frais_courtage = Column(String(50))
     frais_conservation = Column(String(100))
+    frais_transfert = Column(String(100))
     observations = Column(Text)
     created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False, index=True)
     updated_at = Column(
@@ -44,6 +46,33 @@ class SGI(Base):
     )
     # Relationship
     reviews = relationship("Review", back_populates="sgi", cascade="all, delete-orphan")
+
+
+class User(Base):
+    """User model for authentication."""
+
+    __tablename__ = "users"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+        index=True,
+    )
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    username = Column(String(100), unique=True, index=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(255))
+    is_active = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False, index=True)
+    updated_at = Column(
+        DateTime,
+        default=datetime.now(timezone.utc),
+        onupdate=datetime.now(timezone.utc),
+        nullable=False,
+    )
+    # Relationship
+    reviews = relationship("Review", back_populates="user", foreign_keys="Review.user_id")
 
 
 class Review(Base):
@@ -58,10 +87,15 @@ class Review(Base):
         index=True,
     )
     sgi_id = Column(UUID(as_uuid=True), ForeignKey("sgi.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     rating = Column(Integer, nullable=False, index=True)  # 1-5 stars
     comment = Column(Text)
     reviewer_name = Column(String(255))
     reviewer_email = Column(String(255))
+    status = Column(String(20), default=ReviewStatus.PENDING, nullable=False, index=True)  # pending, approved, rejected
+    moderation_reason = Column(Text)  # Reason for rejection/approval
+    moderated_by = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    moderated_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False, index=True)
     updated_at = Column(
         DateTime,
@@ -69,5 +103,6 @@ class Review(Base):
         onupdate=datetime.now(timezone.utc),
         nullable=False,
     )
-    # Relationship
+    # Relationships
     sgi = relationship("SGI", back_populates="reviews")
+    user = relationship("User", back_populates="reviews", foreign_keys="Review.user_id")

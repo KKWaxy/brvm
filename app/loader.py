@@ -42,7 +42,7 @@ def load_sgi_data():
                     agrement_crepmf=row.get("Agrément CREPMF", ""),
                     gestion_libre=row.get("Gestion libre", ""),
                     apport_initial_fcfa=row.get("Apport initial (FCFA)", ""),
-                    courtage=row.get("Courtage (%)", ""),
+                    frais_courtage=row.get("Courtage (%)", ""),
                     frais_conservation=row.get("Frais de conservation", ""),
                     observations=row.get("Observations", ""),
                 )

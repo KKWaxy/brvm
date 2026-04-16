@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routes import router
+from app.auth_routes import router as auth_router
 from app.database import init_db
 from app.loader import load_sgi_data
 
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
     )
 
     # Include routers
+    app.include_router(auth_router)
     app.include_router(router)
 
     return app
