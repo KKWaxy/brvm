@@ -1,6 +1,20 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-sgi}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-sgi_pass}
+      - POSTGRES_DB=${POSTGRES_DB:-sgi_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sgi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -8,7 +22,7 @@ services:
     container_name: sgi_backend
     restart: unless-stopped
     environment:
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///./app.db}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg2://${POSTGRES_USER:-sgi}:${POSTGRES_PASSWORD:-sgi_pass}@postgres:5432/${POSTGRES_DB:-sgi_db}}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supersecretlocal}
       - SERVER_HOST=0.0.0.0
       - SERVER_PORT=8000
@@ -17,6 +31,8 @@ services:
       - ./data:/app/data
     ports:
       - '8000:8000'
+    depends_on:
+      - postgres
 
   frontend_dev:
     image: node:18-alpine
@@ -24,12 +40,13 @@ services:
     volumes:
       - ./frontend:/app:cached
       - /app/node_modules
+      - ./scripts/wait-for-backend.sh:/wait-for-backend.sh:ro
     ports:
       - '5173:5173'
     environment:
-      # When all services run in compose, point VITE_API_URL to backend service
       - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
-    command: sh -c "npm install --silent && npm run dev -- --host 0.0.0.0"
+      - BACKEND_URL=${BACKEND_URL:-http://backend:8000/health}
+    command: sh -c "apk add --no-cache curl && sh /wait-for-backend.sh && npm install --silent && npm run dev -- --host 0.0.0.0"
     depends_on:
       - backend
 
