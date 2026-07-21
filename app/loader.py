@@ -4,8 +4,11 @@ CSV data loader for SGI.
 
 import csv
 from pathlib import Path
+import logging
 from app.models import SGI
 from app.database import SessionLocal
+
+logger = logging.getLogger(__name__)
 
 
 def load_sgi_data():
@@ -13,7 +16,7 @@ def load_sgi_data():
     csv_file = Path(__file__).parent.parent / "data" / "brvm_sgi - brvm_sgi.csv"
 
     if not csv_file.exists():
-        print(f"CSV file not found: {csv_file}")
+        logger.debug("CSV file not found: %s", csv_file)
         return
 
     db = SessionLocal()
@@ -22,7 +25,7 @@ def load_sgi_data():
         # Check if data already loaded
         existing_count = db.query(SGI).count()
         if existing_count > 0:
-            print(f"Data already loaded: {existing_count} records found")
+            logger.info("Data already loaded: %d records found", existing_count)
             return
 
         with open(csv_file, "r", encoding="utf-8") as f:
@@ -50,10 +53,10 @@ def load_sgi_data():
                 records_added += 1
 
             db.commit()
-            print(f"Successfully loaded {records_added} records from CSV")
+            logger.info("Successfully loaded %d records from CSV", records_added)
 
     except Exception as e:
         db.rollback()
-        print(f"Error loading CSV data: {e}")
+        logger.exception("Error loading CSV data: %s", e)
     finally:
         db.close()

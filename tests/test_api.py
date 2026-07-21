@@ -17,7 +17,10 @@ def test_root(client):
     """Test root endpoint."""
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json() == {"message": "Welcome to SGI API"}
+    assert response.json() == {
+        "message": "Welcome to BRVM SGI API",
+        "version": "0.1.0",
+    }
 
 
 def test_health_check(client):
