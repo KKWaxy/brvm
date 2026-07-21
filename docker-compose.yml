@@ -1,6 +1,23 @@
 version: '3.8'
 
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    container_name: sgi_backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./app.db}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supersecretlocal}
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+    volumes:
+      - ./:/app:cached
+      - ./data:/app/data
+    ports:
+      - '8000:8000'
+
   frontend_dev:
     image: node:18-alpine
     working_dir: /app
@@ -10,9 +27,11 @@ services:
     ports:
       - '5173:5173'
     environment:
-      # On macOS: host.docker.internal resolves to host
-      - VITE_API_URL=${VITE_API_URL:-http://host.docker.internal:8000}
+      # When all services run in compose, point VITE_API_URL to backend service
+      - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
     command: sh -c "npm install --silent && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - backend
 
   frontend:
     build:
@@ -22,8 +41,13 @@ services:
       - '8080:80'
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
+    depends_on:
+      - backend
     deploy:
       resources:
         limits:
           cpus: '0.5'
           memory: 512M
+
+volumes:
+  postgres_data: {}
