@@ -86,7 +86,6 @@ async def get_countries(db: Session = Depends(get_db)):
     """Get list of all unique countries."""
     countries = db.query(SGI.pays).distinct().filter(SGI.pays.isnot(None)).all()
     countries_names: List[str] = sorted([c[0] for c in countries if c[0]])
-    print(type(countries_names), countries_names)
     total = len(countries_names)
     return {"countries": countries_names, "total": total}
 

@@ -11,9 +11,8 @@ from app.auth import (
     hash_password,
     verify_password,
     verify_token,
-    get_settings,
 )
-from app.config import Settings
+from app.config import settings
 from app.database import get_db
 from app.models import User
 from app.schemas import UserCreate, UserResponse, TokenResponse, LoginRequest
@@ -32,7 +31,6 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     - `password`: Password (min 8 chars)
     - `full_name`: Optional full name
     """
-    settings = get_settings()
     # Check if user already exists
     existing_user = db.query(User).filter(
         (User.email == user_data.email) | (User.username == user_data.username)
@@ -79,7 +77,6 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     - `email`: User email
     - `password`: User password
     """
-    settings = get_settings()
     user = db.query(User).filter(User.email == login_data.email).first()
     
     if not user or not verify_password(login_data.password, user.hashed_password):

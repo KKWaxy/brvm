@@ -190,10 +190,6 @@ pip install pytest pytest-asyncio httpx
 # Exécuter les tests
 pytest tests/
 
-# Ou avec le script de test en ligne
-python test_api_endpoints.py
-```
-
 ### Test manuel
 
 Une fois le serveur lancé, visitez :
