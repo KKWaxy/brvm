@@ -33,6 +33,12 @@ services:
       - '8000:8000'
     depends_on:
       - postgres
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend_dev:
     image: node:18-alpine
