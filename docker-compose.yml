@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  frontend_dev:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app:cached
+      - /app/node_modules
+    ports:
+      - '5173:5173'
+    environment:
+      # On macOS: host.docker.internal resolves to host
+      - VITE_API_URL=${VITE_API_URL:-http://host.docker.internal:8000}
+    command: sh -c "npm install --silent && npm run dev -- --host 0.0.0.0"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - '8080:80'
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://backend:8000}
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
